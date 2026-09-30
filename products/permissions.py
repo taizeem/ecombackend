@@ -26,3 +26,17 @@ class IsProductSellerOrReadOnly(permissions.BasePermission):
             return True
         # Staff can moderate any product; otherwise must be the owner
         return obj.seller == request.user or request.user.is_staff
+
+
+class IsSellerUser(permissions.BasePermission):
+    """
+    Allows access only to authenticated users with the SELLER role (or staff).
+    """
+    message = "Only registered sellers have access to manage inventory."
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and (getattr(request.user, "role", None) == "SELLER" or request.user.is_staff)
+        )

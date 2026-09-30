@@ -10,8 +10,9 @@ from .serializers import (
     CategorySerializer,
     ProductReadSerializer,
     ProductWriteSerializer,
+    SellerProductSerializer,
 )
-from .permissions import IsSellerOrReadOnly, IsProductSellerOrReadOnly
+from .permissions import IsSellerOrReadOnly, IsProductSellerOrReadOnly, IsSellerUser
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -48,4 +49,32 @@ class ProductViewSet(viewsets.ModelViewSet):
         return ProductReadSerializer
     def perfrom_create(self, serialzer):
         serialzer.save(seller=self.request.user)
-   
+
+
+
+
+class SellerProductViewSet(viewsets.ModelViewSet):
+    """
+    Dedicated endpoint for sellers:
+    - Lists ONLY products belonging to the logged-in seller (both active and inactive).
+    - Automatically assigns request.user as the seller upon creation.
+    - Prevents modifying or viewing other sellers' products.
+    """
+    serializer_class = SellerProductSerializer
+    permission_classes = [IsSellerUser]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["category", "is_active"]
+    search_fields = ["name", "description"]
+    ordering_fields = ["price", "stock", "created_at"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        # Strict multi-tenant isolation: sellers only ever see their own records
+        return (
+            Product.objects.filter(seller=self.request.user)
+            .select_related("category", "seller")
+        )
+
+    def perform_create(self, serializer):
+        # Automatically inject logged-in seller
+        serializer.save(seller=self.request.user)

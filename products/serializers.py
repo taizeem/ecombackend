@@ -75,3 +75,43 @@ class ProductWriteSerializer(serializers.ModelSerializer):
                 {"compare_at_price": "Compare-at price (MSRP) must be greater than current price."}
             )
         return attrs
+
+
+from rest_framework import serializers
+from .models import Product
+
+
+class SellerProductSerializer(serializers.ModelSerializer):
+    seller_username = serializers.CharField(source="seller.username", read_only=True)
+    is_in_stock = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "seller",
+            "seller_username",
+            "category",
+            "description",
+            "price",
+            "compare_at_price",
+            "stock",
+            "is_in_stock",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        # 'seller' is set automatically from the request user, never passed manually
+        read_only_fields = ["id", "slug", "seller", "created_at", "updated_at"]
+
+    def validate(self, attrs):
+        price = attrs.get("price")
+        compare_at_price = attrs.get("compare_at_price")
+
+        if compare_at_price and price and compare_at_price <= price:
+            raise serializers.ValidationError(
+                {"compare_at_price": "Compare-at price (MSRP) must be greater than current price."}
+            )
+        return attrs
