@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.text import slugify
+from django.conf import settings
 
 
 class TimeStampedModel(models.Model):
@@ -41,6 +42,11 @@ class Product(TimeStampedModel):
     # UUID primary key prevents sequential ID enumeration attacks in public APIs
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete= models.CASCADE,
+        related_name="products",
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,  # Prevents accidental cascade deletion of products when a category is deleted
@@ -76,6 +82,7 @@ class Product(TimeStampedModel):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
+            models.Index(fields=["seller", "is_active"]),
             # Composite index for filtering active products inside a category
             models.Index(fields=["category", "is_active"]),
             # Composite index for sorting active products by price

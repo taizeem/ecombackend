@@ -30,6 +30,7 @@ class SimpleCategorySerializer(serializers.ModelSerializer):
 class ProductReadSerializer(serializers.ModelSerializer):
     category = SimpleCategorySerializer(read_only=True)
     is_in_stock = serializers.BooleanField(read_only=True)
+    seller_username = serializers.CharField(source="seller.username", read_only=True)
 
     class Meta:
         model = Product
@@ -37,6 +38,8 @@ class ProductReadSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "slug",
+            "seller",
+            "seller_username",
             "category",
             "description",
             "price",
@@ -47,7 +50,7 @@ class ProductReadSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "slug", "created_at", "updated_at"]
+        read_only_fields = fields
 
 
 class ProductWriteSerializer(serializers.ModelSerializer):
