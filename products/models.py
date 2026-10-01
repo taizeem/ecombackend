@@ -1,3 +1,4 @@
+import os
 import uuid
 from decimal import Decimal
 from django.core.validators import MinValueValidator
@@ -109,3 +110,36 @@ class Product(TimeStampedModel):
     @property
     def is_in_stock(self) -> bool:
         return self.stock > 0
+
+def product_image_upload_path(instance, filename):
+    """
+    Store files in: media/products/YYYY/MM/<uuid>.<ext>
+    Prevents filename collisions and file system bottlenecks.
+    """
+    ext = os.path.splitext(filename)[1].lower()
+    unique_filename = f"{uuid.uuid4()}{ext}"
+    return os.path.join("products", "%Y", "%m", unique_filename)
+
+
+class ProductImage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image = models.ImageField(upload_to=product_image_upload_path)
+    alt_text = models.CharField(max_length=255, blank=True, default="")
+    is_feature = models.BooleanField(
+        default=False,
+        help_text="Designates this as the primary thumbnail for the product.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-is_feature", "-created_at"]
+        verbose_name = "Product Image"
+        verbose_name_plural = "Product Images"
+
+    def __str__(self):
+        return f"Image for {self.product.name}"

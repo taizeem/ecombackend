@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product
+from .models import Category, Product, ProductImage
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -77,8 +77,7 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         return attrs
 
 
-from rest_framework import serializers
-from .models import Product
+
 
 
 class SellerProductSerializer(serializers.ModelSerializer):
@@ -115,3 +114,73 @@ class SellerProductSerializer(serializers.ModelSerializer):
                 {"compare_at_price": "Compare-at price (MSRP) must be greater than current price."}
             )
         return attrs
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ["id", "image", "alt_text", "is_feature", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class ProductImageUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ["id", "image", "alt_text", "is_feature"]
+
+    def validate_image(self, file):
+        # Enforce max file size: 5MB
+        max_size_mb = 5
+        if file.size > max_size_mb * 1024 * 1024:
+            raise serializers.ValidationError(f"Image size cannot exceed {max_size_mb}MB.")
+        return file
+
+
+# Update ProductReadSerializer to nest images:
+class ProductReadSerializer(serializers.ModelSerializer):
+    category = SimpleCategorySerializer(read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    is_in_stock = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "seller",
+            "category",
+            "description",
+            "price",
+            "compare_at_price",
+            "stock",
+            "is_in_stock",
+            "is_active",
+            "images",  # <-- Nested array of image objects
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+
+# Update SellerProductSerializer to also show existing images:
+class SellerProductSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "category",
+            "description",
+            "price",
+            "compare_at_price",
+            "stock",
+            "is_active",
+            "images",  # <-- Shows uploaded images to the seller
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "slug", "created_at", "updated_at"]
