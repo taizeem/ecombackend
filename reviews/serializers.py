@@ -41,5 +41,10 @@ class ReviewSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"product": "You can only review products that you have successfully purchased."}
                 )
+        if product.seller == user:
+            raise serializers.ValidationError(
+                {"product": "Sellers cannot leave reviews on their own products."}
+            )
 
         return attrs
+    
