@@ -5,6 +5,8 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 from django.conf import settings
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 
 class TimeStampedModel(models.Model):
@@ -143,3 +145,8 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.product.name}"
+@receiver(post_delete, sender=ProductImage)
+def auto_delete_file_on_image_delete(sender, instance, **kwargs):
+    """Deletes physical file from filesystem when corresponding ProductImage object is deleted."""
+    if instance.image and instance.image.storage.exists(instance.image.name):
+        instance.image.delete(save=False)
