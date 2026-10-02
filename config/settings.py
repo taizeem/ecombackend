@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'products',
     'users',
     'cart',
+    'orders',
 ]
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
