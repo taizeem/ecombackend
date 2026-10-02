@@ -1,7 +1,7 @@
-from django.db.models import Count
-from rest_framework import  viewsets, permissions, status
+from django.db.models import Count, Avg
+from rest_framework import  viewsets
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.response import Response
+
 from rest_framework.filters import OrderingFilter, SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
@@ -55,6 +55,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         return ProductReadSerializer
     def perfrom_create(self, serialzer):
         serialzer.save(seller=self.request.user)
+
+    def get_queryset(self):
+        queryset = Product.objects.select_related("category", "seller").annotate(
+            average_rating=Avg("reviews__rating"),
+            review_count=Count("reviews"),
+        )
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(is_active=True, category__is_active=True)
+        return queryset
 
 
 

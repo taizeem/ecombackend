@@ -47,6 +47,8 @@ class ProductReadSerializer(serializers.ModelSerializer):
             "stock",
             "is_in_stock",
             "is_active",
+            "average_rating",
+            "review_count",
             "created_at",
             "updated_at",
         ]
