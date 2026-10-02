@@ -10,8 +10,12 @@ class CartViewSet(viewsets.ViewSet):
     Manage the authenticated user's shopping cart.
     """
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CartSerializer  
+    queryset = Cart.objects.none()
 
     def get_cart(self):
+        if getattr(self, "swagger_fake_view", False):
+            return None
         cart, _ = Cart.objects.get_or_create(user=self.request.user)
         return cart
 
