@@ -16,13 +16,14 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        qs = Order.objects.prefetch_related("items", "items__product", "items__seller")
         # Admins see all orders, Sellers see orders containing their items, Buyers see their own orders
         if user.is_staff:
-            return Order.objects.all().prefetch_related("items", "items__product")
+            return qs.all()
         elif getattr(user, "role", None) == "SELLER":
             # Orders containing items sold by this seller
-            return Order.objects.filter(items__seller=user).distinct().prefetch_related("items")
-        return Order.objects.filter(user=user).prefetch_related("items")
+            return qs.filter(items__seller=user).distinct()
+        return qs.filter(user=user)
 
     @action(detail=False, methods=["post"], url_path="checkout")
     def checkout(self, request):
@@ -62,8 +63,8 @@ class OrderViewSet(viewsets.ModelViewSet):
 
                     if product.stock < cart_item.quantity:
                         raise ValueError(
-                            f"Insufficient stock for '{product.name}'. Available: {product.stock}, Requested: {cart_item.quantity}"
-                        )
+                            f"'{product.name}' only has {product.stock} units left in stock. Please update your cart."
+                                )
 
                     item_subtotal = product.price * cart_item.quantity
                     total_amount += item_subtotal
