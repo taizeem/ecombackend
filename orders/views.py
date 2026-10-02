@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from cart.models import Cart
 from products.models import Product
 from .models import Order, OrderItem
-from .serializers import OrderSerializer, CheckoutSerializer
+from .serializers import OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -106,3 +106,35 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({"error": "Checkout failed due to an unexpected error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+    
+    @action(detail=True, methods=["patch"], url_path="status")
+    def update_status(self, request, pk=None):
+        """
+        Allows Admins/Staff to update any order status,
+        and Sellers to update status ONLY for orders containing their products.
+        """
+        order = self.get_object()
+        user = request.user
+
+        # Granular permission check
+        if not user.is_staff:
+            if getattr(user, "role", None) == "SELLER":
+                # Verify this seller actually has items inside this order
+                has_seller_item = order.items.filter(seller=user).exists()
+                if not has_seller_item:
+                    return Response(
+                        {"error": "You do not have permission to update an order that contains no products from your inventory."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+            else:
+                return Response(
+                    {"error": "You do not have permission to update order statuses."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        serializer = OrderStatusUpdateSerializer(order, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)

@@ -35,3 +35,14 @@ class OrderSerializer(serializers.ModelSerializer):
 class CheckoutSerializer(serializers.Serializer):
     shipping_address = serializers.CharField(required=True)
     phone_number = serializers.CharField(required=True, max_length=20)
+
+class OrderStatusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ["status"]
+
+    def validate_status(self, value):
+        valid_choices = [choice[0] for choice in Order.Status.choices]
+        if value not in valid_choices:
+            raise serializers.ValidationError("Invalid order status choice.")
+        return value
