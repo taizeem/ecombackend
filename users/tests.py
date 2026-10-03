@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import AccessToken
 
 User = get_user_model()
 
@@ -82,3 +83,38 @@ class UserAuthTests(APITestCase):
             self.register_url = reverse("register")
         except:
             self.register_url = "/api/v1/auth/register/"
+
+
+    def test_jwt_login_returns_custom_role_claims(self):
+        """
+        Verify that logging in returns user metadata in the JSON response
+        and embeds custom claims (role, username, email) directly inside the JWT payload.
+        """
+        User.objects.create_user(
+            username="seller_user",
+            email="seller@example.com",
+            password="SecurePassword123!",
+            role="SELLER",
+        )
+
+        payload = {
+            "username": "seller_user",
+            "password": "SecurePassword123!",
+        }
+        response = self.client.post(self.login_url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 1. Verify claims in the HTTP response body
+        self.assertIn("user", response.data)
+        self.assertEqual(response.data["user"]["username"], "seller_user")
+        self.assertEqual(response.data["user"]["email"], "seller@example.com")
+        self.assertEqual(response.data["user"]["role"], "SELLER")
+
+        # 2. Decode the JWT access token and verify embedded payload claims
+        access_token_str = response.data["access"]
+        decoded_token = AccessToken(access_token_str)
+
+        self.assertEqual(decoded_token["role"], "SELLER")
+        self.assertEqual(decoded_token["username"], "seller_user")
+        self.assertEqual(decoded_token["email"], "seller@example.com")
