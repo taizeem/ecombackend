@@ -30,7 +30,8 @@ class SimpleCategorySerializer(serializers.ModelSerializer):
 class ProductReadSerializer(serializers.ModelSerializer):
     category = SimpleCategorySerializer(read_only=True)
     is_in_stock = serializers.BooleanField(read_only=True)
-    seller_username = serializers.CharField(source="seller.username", read_only=True)
+    average_rating = serializers.FloatField(read_only=True, default=0.0)
+    review_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Product
@@ -83,8 +84,10 @@ class ProductWriteSerializer(serializers.ModelSerializer):
 
 
 class SellerProductSerializer(serializers.ModelSerializer):
+    seller = serializers.UUIDField(source="seller.id", read_only=True)
     seller_username = serializers.CharField(source="seller.username", read_only=True)
     is_in_stock = serializers.BooleanField(read_only=True)
+    
 
     class Meta:
         model = Product

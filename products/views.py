@@ -44,7 +44,6 @@ class ProductViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "description"]
     ordering_fields = ["price", "created_at", "stock", "name"]
     ordering = ["-created_at"]
-    queryset = Product.objects.select_related("category", "seller").filter(is_active=True)
     permission_classes=[IsProductSellerOrReadOnly, IsSellerOrReadOnly]
    
 
@@ -57,6 +56,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         serialzer.save(seller=self.request.user)
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Product.objects.none()
+        
         queryset = Product.objects.select_related("category", "seller").annotate(
             average_rating=Avg("reviews__rating"),
             review_count=Count("reviews"),
